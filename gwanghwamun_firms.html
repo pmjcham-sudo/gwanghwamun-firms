@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>광화문 세무·법무법인 특판 관리</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.15);
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --text-faint: #9e9e9e;
+    --accent: #2563eb;
+    --accent-bg: #eff6ff;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --amber: #d97706;
+    --amber-bg: #fffbeb;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --purple: #7c3aed;
+    --purple-bg: #f5f3ff;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Layout ── */
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border-strong);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky; top: 0; z-index: 50;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-logo {
+    width: 32px; height: 32px; background: var(--text);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  }
+  .header-logo svg { width: 18px; height: 18px; fill: white; }
+  .header-title { font-size: 15px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: var(--text-muted); }
+
+  .header-right { display: flex; align-items: center; gap: 8px; }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    gap: 0;
+  }
+  .stat-item {
+    padding: 12px 20px 12px 0;
+    margin-right: 20px;
+    border-right: 0.5px solid var(--border);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-num { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .stat-label { font-size: 11px; color: var(--text-muted); }
+
+  /* ── Tabs + toolbar ── */
+  .toolbar {
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .tabs { display: flex; gap: 2px; background: rgba(0,0,0,0.05); border-radius: var(--radius); padding: 2px; }
+  .tab {
+    padding: 5px 14px; font-size: 13px; font-weight: 500;
+    border-radius: 6px; border: none; background: transparent;
+    cursor: pointer; color: var(--text-muted); transition: all .15s;
+    font-family: inherit;
+  }
+  .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+  .spacer { flex: 1; }
+
+  input[type=text], select {
+    height: 34px; padding: 0 10px; font-size: 13px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--surface); color: var(--text);
+    font-family: inherit; outline: none;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--accent); }
+  input[type=text] { min-width: 200px; }
+
+  /* ── Buttons ── */
+  .btn {
+    height: 34px; padding: 0 14px; font-size: 13px; font-weight: 500;
+    border-radius: var(--radius); border: 0.5px solid var(--border-strong);
+    background: var(--surface); color: var(--text); cursor: pointer;
+    font-family: inherit; display: inline-flex; align-items: center; gap: 6px;
+    transition: background .12s;
+  }
+  .btn:hover { background: var(--bg); }
+  .btn.primary { background: var(--text); color: white; border-color: var(--text); }
+  .btn.primary:hover { opacity: 0.88; }
+  .btn.danger { color: var(--red); border-color: currentColor; }
+  .btn.sm { height: 28px; padding: 0 10px; font-size: 12px; }
+  .btn.xs { height: 24px; padding: 0 8px; font-size: 11px; }
+
+  /* ── Main content ── */
+  .main { padding: 20px 24px; flex: 1; }
+
+  /* ── Cards (list view) ── */
+  .firm-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .firm-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color .15s;
+  }
+  .firm-card:hover { border-color: var(--border-strong); }
+
+  .firm-card-body {
+    padding: 14px 16px;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+
+  .type-dot {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0; margin-top: 1px;
+  }
+
+  .firm-info { flex: 1; min-width: 0; }
+  .firm-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .firm-addr { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .firm-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  .tag {
+    display: inline-flex; align-items: center;
+    font-size: 11px; padding: 2px 8px; border-radius: 20px;
+    font-weight: 500;
+  }
+  .tag-tax    { background: var(--green-bg);  color: var(--green);  }
+  .tag-law    { background: var(--accent-bg); color: var(--accent); }
+  .tag-admin  { background: var(--amber-bg);  color: var(--amber);  }
+  .tag-etc    { background: var(--bg);        color: var(--text-muted); border: 0.5px solid var(--border-strong); }
+  .tag-sent   { background: var(--green-bg);  color: var(--green);  }
+  .tag-unsent { background: var(--amber-bg);  color: var(--amber);  }
+  .tag-neutral { background: var(--bg); color: var(--text-muted); border: 0.5px solid var(--border); }
+
+  .firm-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  .sent-toggle {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .sent-toggle.done { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .sent-toggle svg { width: 14px; height: 14px; }
+
+  .firm-memo {
+    padding: 8px 16px 10px 64px;
+    font-size: 12px; color: var(--text-muted);
+    border-top: 0.5px solid var(--border);
+    background: var(--bg);
+  }
+
+  /* ── Building view ── */
+  .building-grid { display: flex; flex-direction: column; gap: 12px; }
+  .building-card {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+  }
+  .building-header {
+    padding: 12px 16px; border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg);
+  }
+  .building-name { font-weight: 700; font-size: 14px; }
+  .building-addr { font-size: 12px; color: var(--text-muted); }
+
+  table.floor-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.floor-table th {
+    text-align: left; padding: 8px 16px;
+    font-size: 11px; font-weight: 500; color: var(--text-muted);
+    border-bottom: 0.5px solid var(--border); background: var(--bg);
+  }
+  table.floor-table td { padding: 10px 16px; border-bottom: 0.5px solid var(--border); }
+  table.floor-table tr:last-child td { border-bottom: none; }
+
+  /* ── Mailing view ── */
+  .mailing-list { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .mailing-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-bottom: 0.5px solid var(--border);
+  }
+  .mailing-row:last-child { border-bottom: none; }
+  .mailing-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+
+  /* ── Modal ── */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.4);
+    align-items: center; justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius-lg);
+    width: 480px; max-width: 95vw; max-height: 90vh;
+    overflow-y: auto;
+    border: 0.5px solid var(--border-strong);
+  }
+  .modal-header {
+    padding: 16px 20px; border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  .modal-header h2 { font-size: 15px; font-weight: 700; }
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .modal-footer {
+    padding: 14px 20px; border-top: 0.5px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+
+  .form-row { display: flex; flex-direction: column; gap: 5px; }
+  .form-row label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+  .form-row input, .form-row select, .form-row textarea {
+    height: auto; padding: 8px 10px; font-size: 13px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--surface); color: var(--text); font-family: inherit; outline: none;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--accent); }
+  .form-row textarea { height: 72px; resize: vertical; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* ── Loading / error ── */
+  .status-bar {
+    padding: 8px 24px; font-size: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .status-bar.loading { color: var(--accent); }
+  .status-bar.error   { color: var(--red); background: var(--red-bg); }
+  .status-bar.success { color: var(--green); }
+
+  .empty {
+    text-align: center; padding: 48px 20px;
+    color: var(--text-muted); font-size: 13px;
+  }
+
+  /* ── API key banner ── */
+  .api-banner {
+    background: var(--amber-bg); border-bottom: 0.5px solid rgba(217,119,6,0.2);
+    padding: 10px 24px; font-size: 13px; color: var(--amber);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .api-banner input[type=text] {
+    flex: 1; max-width: 340px; height: 30px;
+    border-color: rgba(217,119,6,0.3); background: rgba(255,255,255,0.7);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+
+  /* ── Spinner ── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid currentColor;
+    border-top-color: transparent; border-radius: 50%;
+    animation: spin .6s linear infinite; display: inline-block;
+  }
+
+  /* ── Export box ── */
+  .export-box {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    white-space: pre-wrap; word-break: break-all;
+    max-height: 180px; overflow-y: auto; margin-top: 12px;
+  }
+
+  /* ── Map ── */
+  #kakao-map { width: 100%; height: 400px; border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- API Key Banner -->
+<div class="api-banner" id="api-banner">
+  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 7a2 2 0 0 1 2 2m4 0a6 6 0 0 1-7.743 5.743L11 17H9v2H7v2H4a1 1 0 0 1-1-1v-2.586a1 1 0 0 1 .293-.707l5.964-5.964A6 6 0 1 1 21 9z"/></svg>
+  <span>카카오 REST API 키를 입력하세요</span>
+  <input type="text" id="kakao-key-input" placeholder="카카오 REST API 키 (32자리)" maxlength="50">
+  <button class="btn sm primary" onclick="saveKakaoKey()">저장</button>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-left">
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24"><path d="M19 2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-7 14H8v-2h4v2zm4-4H8v-2h8v2zm0-4H8V6h8v2z"/></svg>
+    </div>
+    <div>
+      <div class="header-title">광화문 법인 특판 관리</div>
+      <div class="header-sub">한국투자증권 광화문센터 반경 1km</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn" onclick="exportCSV()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      CSV 내보내기
+    </button>
+    <button class="btn" onclick="searchKakao()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      주변 검색
+    </button>
+    <button class="btn primary" onclick="openAddModal()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      업체 추가
+    </button>
+  </div>
+</header>
+
+<!-- Stats -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-item"><div class="stat-num" id="s-total">-</div><div class="stat-label">전체 업체</div></div>
+  <div class="stat-item"><div class="stat-num" id="s-tax">-</div><div class="stat-label">세무법인·세무사</div></div>
+  <div class="stat-item"><div class="stat-num" id="s-law">-</div><div class="stat-label">법무·행정</div></div>
+  <div class="stat-item"><div class="stat-num" id="s-unsent">-</div><div class="stat-label">미발송</div></div>
+  <div class="stat-item"><div class="stat-num" id="s-sent">-</div><div class="stat-label">발송완료</div></div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar loading" id="status-bar">
+  <span class="spinner"></span> 구글 시트에서 데이터 불러오는 중...
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('list',this)">목록</button>
+    <button class="tab" onclick="switchTab('building',this)">건물별</button>
+    <button class="tab" onclick="switchTab('map',this)">지도</button>
+    <button class="tab" onclick="switchTab('mailing',this)">우편 발송</button>
+  </div>
+  <div class="spacer"></div>
+  <input type="text" id="search" placeholder="업체명, 주소 검색..." oninput="render()">
+  <select id="filter-type" onchange="render()">
+    <option value="">전체 유형</option>
+    <option value="세무">세무</option>
+    <option value="법무">법무</option>
+    <option value="행정">행정</option>
+    <option value="기타">기타</option>
+  </select>
+  <select id="filter-sent" onchange="render()">
+    <option value="">발송 전체</option>
+    <option value="미발송">미발송</option>
+    <option value="발송완료">발송완료</option>
+  </select>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div id="tab-list"><div class="firm-list" id="list-container"></div></div>
+  <div id="tab-building" style="display:none"><div class="building-grid" id="building-container"></div></div>
+  <div id="tab-map" style="display:none">
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+      <span style="font-size:13px;color:var(--text-muted)">카카오 지도 — 업체 위치 표시</span>
+      <button class="btn sm" onclick="initMap()">지도 새로고침</button>
+    </div>
+    <div id="kakao-map"></div>
+  </div>
+  <div id="tab-mailing" style="display:none">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:13px;color:var(--text-muted)">미발송 업체를 선택하고 일괄 처리하세요</span>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="selectAll()">전체 선택</button>
+      <button class="btn" onclick="markSelectedSent()">선택 발송완료 처리</button>
+      <button class="btn" onclick="showExport()">주소록 내보내기</button>
+    </div>
+    <div class="mailing-list" id="mailing-container"></div>
+    <div id="export-output" style="display:none">
+      <div style="font-size:13px;font-weight:500;margin-top:16px;margin-bottom:6px">주소록 (복사해서 사용하세요)</div>
+      <div class="export-box" id="export-text"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .app -->
+
+<!-- Modal -->
+<div class="overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">업체 추가</h2>
+      <button class="btn sm" onclick="closeModal()">닫기</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>업체명 *</label><input type="text" id="f-name" placeholder="예: 세무법인 광화문"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>유형</label>
+          <select id="f-type"><option>세무</option><option>법무</option><option>행정</option><option>기타</option></select>
+        </div>
+        <div class="form-row"><label>전화번호</label><input type="text" id="f-phone" placeholder="02-000-0000"></div>
+      </div>
+      <div class="form-row"><label>건물명</label><input type="text" id="f-building" placeholder="예: 광화문오피시아빌딩"></div>
+      <div class="form-row"><label>주소 *</label><input type="text" id="f-addr" placeholder="예: 서울 종로구 새문안로 92"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>층수</label><input type="text" id="f-floor" placeholder="예: 7층"></div>
+        <div class="form-row"><label>호수</label><input type="text" id="f-room" placeholder="예: 701호"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>임직원수 (추정)</label><input type="number" id="f-emp" placeholder="10" min="0"></div>
+        <div class="form-row"><label>발송 상태</label>
+          <select id="f-sent"><option value="미발송">미발송</option><option value="발송완료">발송완료</option></select>
+        </div>
+      </div>
+      <div class="form-row"><label>메모</label><textarea id="f-memo" placeholder="특이사항, 담당자 등"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" onclick="saveFirm()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Kakao Map SDK (will load when key is available) -->
+<script>
+// ── Config ──────────────────────────────────────────────
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyYBT7tXpRNqcyNWrwlsBXi7ZIUKOVcY_uaJuVKPYrO4lIQs2tl2vndBTYOWke5W793/exec';
+const KAKAO_KEY_STORAGE = 'kakao_rest_api_key';
+const CENTER_LAT = 37.5718;
+const CENTER_LNG = 126.9769;
+
+// ── State ────────────────────────────────────────────────
+let firms = [];
+let editingId = null;
+let mailingSelected = new Set();
+let kakaoMap = null;
+let mapLoaded = false;
+
+// ── Kakao Key ────────────────────────────────────────────
+function getKakaoKey() { return localStorage.getItem(KAKAO_KEY_STORAGE) || ''; }
+
+function saveKakaoKey() {
+  const key = document.getElementById('kakao-key-input').value.trim();
+  if (!key) { alert('API 키를 입력하세요.'); return; }
+  localStorage.setItem(KAKAO_KEY_STORAGE, key);
+  document.getElementById('api-banner').style.display = 'none';
+  loadKakaoSDK(key);
+  showStatus('카카오 API 키가 저장됐어요.', 'success');
+}
+
+function loadKakaoSDK(key) {
+  if (document.getElementById('kakao-sdk')) return;
+  const s = document.createElement('script');
+  s.id = 'kakao-sdk';
+  s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&libraries=services`;
+  s.onload = () => { mapLoaded = true; };
+  document.head.appendChild(s);
+}
+
+// ── Status ───────────────────────────────────────────────
+function showStatus(msg, type = 'loading') {
+  const el = document.getElementById('status-bar');
+  el.className = 'status-bar ' + type;
+  el.innerHTML = type === 'loading'
+    ? `<span class="spinner"></span> ${msg}`
+    : msg;
+  if (type !== 'loading') setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function hideStatus() { document.getElementById('status-bar').style.display = 'none'; }
+
+// ── Data (Google Sheets) ──────────────────────────────────
+async function loadFirms() {
+  showStatus('구글 시트에서 데이터 불러오는 중...');
+  try {
+    const res = await fetch(GAS_URL);
+    const json = await res.json();
+    firms = (json.data || []).map(f => ({
+      ...f,
+      id: String(f.id),
+      emp: f.emp ? Number(f.emp) : null
+    }));
+    hideStatus();
+    render();
+  } catch(e) {
+    showStatus('데이터 불러오기 실패. 구글 시트 배포 설정을 확인하세요.', 'error');
+  }
+}
+
+async function gasRequest(action, row) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action, row })
+  });
+  return res.json();
+}
+
+// ── ID helper ─────────────────────────────────────────────
+function newId() {
+  return firms.length ? String(Math.max(...firms.map(f => Number(f.id) || 0)) + 1) : '1';
+}
+
+// ── Filter ───────────────────────────────────────────────
+function filtered() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const ft = document.getElementById('filter-type').value;
+  const fs = document.getElementById('filter-sent').value;
+  return firms.filter(f => {
+    if (q && !((f.name||'').toLowerCase().includes(q) || (f.addr||'').toLowerCase().includes(q) || (f.building||'').toLowerCase().includes(q))) return false;
+    if (ft && f.type !== ft) return false;
+    if (fs && f.sent !== fs) return false;
+    return true;
+  });
+}
+
+// ── Type helpers ──────────────────────────────────────────
+function typeClass(t) { return t==='세무'?'tax':t==='법무'?'law':t==='행정'?'admin':'etc'; }
+function typeEmoji(t) { return t==='세무'?'🧾':t==='법무'?'⚖️':t==='행정'?'📋':'📌'; }
+function typeBg(t) {
+  return t==='세무'?'background:var(--green-bg)':
+         t==='법무'?'background:var(--accent-bg)':
+         t==='행정'?'background:var(--amber-bg)':'background:var(--bg)';
+}
+
+// ── Stats ─────────────────────────────────────────────────
+function renderStats() {
+  document.getElementById('s-total').textContent = firms.length;
+  document.getElementById('s-tax').textContent = firms.filter(f=>f.type==='세무').length;
+  document.getElementById('s-law').textContent = firms.filter(f=>f.type==='법무'||f.type==='행정').length;
+  document.getElementById('s-unsent').textContent = firms.filter(f=>f.sent==='미발송').length;
+  document.getElementById('s-sent').textContent = firms.filter(f=>f.sent==='발송완료').length;
+}
+
+// ── Render ────────────────────────────────────────────────
+function render() {
+  renderStats();
+  const list = filtered();
+  const activeTab = document.querySelector('.tab.active').textContent;
+  if (!document.getElementById('tab-list').style.display || document.getElementById('tab-list').style.display !== 'none') renderList(list);
+  if (document.getElementById('tab-building').style.display !== 'none') renderBuilding();
+  if (document.getElementById('tab-mailing').style.display !== 'none') renderMailing();
+}
+
+function renderList(list) {
+  const c = document.getElementById('list-container');
+  if (!list.length) { c.innerHTML = '<div class="empty">검색 결과가 없어요</div>'; return; }
+  c.innerHTML = list.map(f => `
+    <div class="firm-card">
+      <div class="firm-card-body">
+        <div class="type-dot" style="${typeBg(f.type)}">${typeEmoji(f.type)}</div>
+        <div class="firm-info">
+          <div class="firm-name">${f.name}</div>
+          <div class="firm-addr">${[f.building, f.addr, f.floor, f.room].filter(Boolean).join(' · ')}</div>
+          <div class="firm-tags">
+            <span class="tag tag-${typeClass(f.type)}">${f.type}</span>
+            <span class="tag ${f.sent==='발송완료'?'tag-sent':'tag-unsent'}">${f.sent}</span>
+            ${f.emp ? `<span class="tag tag-neutral">임직원 ${f.emp}명</span>` : ''}
+            ${f.phone ? `<span class="tag tag-neutral">${f.phone}</span>` : ''}
+          </div>
+        </div>
+        <div class="firm-actions">
+          <button class="sent-toggle ${f.sent==='발송완료'?'done':''}" title="발송완료 토글" onclick="toggleSent('${f.id}')">
+            <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+          <button class="btn sm" onclick="openEditModal('${f.id}')">수정</button>
+          <button class="btn sm danger" onclick="deleteFirm('${f.id}')">삭제</button>
+        </div>
+      </div>
+      ${f.memo ? `<div class="firm-memo">📌 ${f.memo}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderBuilding() {
+  const buildings = {};
+  firms.forEach(f => {
+    const key = f.building || f.addr || '주소 미상';
+    if (!buildings[key]) buildings[key] = { name: f.building||'', addr: f.addr||'', firms: [] };
+    buildings[key].firms.push(f);
+  });
+  const c = document.getElementById('building-container');
+  if (!Object.keys(buildings).length) { c.innerHTML = '<div class="empty">데이터가 없어요</div>'; return; }
+  c.innerHTML = Object.entries(buildings).map(([key, b]) => `
+    <div class="building-card">
+      <div class="building-header">
+        <div>
+          <div class="building-name">${b.name || b.addr}</div>
+          ${b.name ? `<div class="building-addr">${b.addr}</div>` : ''}
+        </div>
+        <span class="tag tag-neutral">${b.firms.length}개 업체</span>
+      </div>
+      <table class="floor-table">
+        <thead><tr><th>층/호</th><th>업체명</th><th>유형</th><th>임직원</th><th>발송</th></tr></thead>
+        <tbody>
+          ${b.firms.map(f => `
+            <tr>
+              <td style="color:var(--text-muted);font-size:12px">${[f.floor,f.room].filter(Boolean).join(' ')||'-'}</td>
+              <td style="font-weight:500">${f.name}</td>
+              <td><span class="tag tag-${typeClass(f.type)}">${f.type}</span></td>
+              <td style="color:var(--text-muted)">${f.emp?f.emp+'명':'-'}</td>
+              <td><span class="tag ${f.sent==='발송완료'?'tag-sent':'tag-unsent'}">${f.sent}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `).join('');
+}
+
+function renderMailing() {
+  const pending = firms.filter(f => f.sent === '미발송');
+  const c = document.getElementById('mailing-container');
+  if (!pending.length) { c.innerHTML = '<div class="empty" style="background:var(--surface)">모든 업체에 발송 완료했어요 🎉</div>'; return; }
+  c.innerHTML = pending.map(f => `
+    <div class="mailing-row">
+      <input type="checkbox" id="mc-${f.id}" ${mailingSelected.has(f.id)?'checked':''} onchange="toggleMailSelect('${f.id}')">
+      <div style="flex:1">
+        <div style="font-weight:500">${f.name}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${[f.addr,f.floor,f.room].filter(Boolean).join(' ')}</div>
+      </div>
+      <span class="tag tag-${typeClass(f.type)}">${f.type}</span>
+      ${f.emp ? `<span class="tag tag-neutral">${f.emp}명</span>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── Map ───────────────────────────────────────────────────
+function initMap() {
+  if (!mapLoaded || !window.kakao) { alert('카카오 API 키를 먼저 저장하세요.'); return; }
+  const container = document.getElementById('kakao-map');
+  const options = { center: new kakao.maps.LatLng(CENTER_LAT, CENTER_LNG), level: 5 };
+  kakaoMap = new kakao.maps.Map(container, options);
+
+  const gc = new kakao.maps.services.Geocoder();
+  firms.forEach(f => {
+    if (!f.addr) return;
+    gc.addressSearch(f.addr, (result, status) => {
+      if (status !== kakao.maps.services.Status.OK) return;
+      const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+      const marker = new kakao.maps.Marker({ map: kakaoMap, position: coords });
+      const iw = new kakao.maps.InfoWindow({
+        content: `<div style="padding:6px 10px;font-size:12px;font-family:sans-serif"><b>${f.name}</b><br>${f.addr}</div>`
+      });
+      kakao.maps.event.addListener(marker, 'click', () => iw.open(kakaoMap, marker));
+    });
+  });
+}
+
+function searchKakao() {
+  const key = getKakaoKey();
+  if (!key) { alert('카카오 API 키를 먼저 저장하세요.'); return; }
+  showStatus('카카오에서 주변 법인 검색 중...', 'loading');
+  document.getElementById('status-bar').style.display = 'flex';
+
+  const keywords = ['세무법인', '법무법인', '세무사 사무소', '법률사무소'];
+  let all = [];
+  let done = 0;
+
+  keywords.forEach(kw => {
+    fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(kw)}&x=${CENTER_LNG}&y=${CENTER_LAT}&radius=1000&size=15`, {
+      headers: { Authorization: `KakaoAK ${key}` }
+    })
+    .then(r => r.json())
+    .then(data => {
+      all = all.concat(data.documents || []);
+      done++;
+      if (done === keywords.length) processKakaoResults(all);
+    })
+    .catch(() => { done++; if (done === keywords.length) processKakaoResults(all); });
+  });
+}
+
+function processKakaoResults(docs) {
+  const existing = new Set(firms.map(f => f.name));
+  const newItems = [];
+  const seen = new Set();
+
+  docs.forEach(d => {
+    if (seen.has(d.place_name) || existing.has(d.place_name)) return;
+    seen.add(d.place_name);
+    let type = '기타';
+    if (d.place_name.includes('세무')) type = '세무';
+    else if (d.place_name.includes('법무') || d.place_name.includes('법률')) type = '법무';
+    else if (d.place_name.includes('행정')) type = '행정';
+
+    newItems.push({
+      id: newId() + '_' + Math.random().toString(36).slice(2,6),
+      name: d.place_name,
+      type, building: '', addr: d.road_address_name || d.address_name,
+      floor: '', room: '', phone: d.phone || '',
+      emp: null, sent: '미발송', memo: '카카오 검색 자동 추가'
+    });
+  });
+
+  if (!newItems.length) { showStatus('새로 추가할 업체가 없어요 (이미 모두 등록됨)', 'success'); return; }
+
+  Promise.all(newItems.map(item => gasRequest('add', item)))
+    .then(() => {
+      showStatus(`${newItems.length}개 업체가 추가됐어요!`, 'success');
+      loadFirms();
+    })
+    .catch(() => showStatus('일부 업체 저장에 실패했어요.', 'error'));
+}
+
+// ── CRUD ──────────────────────────────────────────────────
+async function toggleSent(id) {
+  const f = firms.find(x => x.id === id); if (!f) return;
+  f.sent = f.sent === '발송완료' ? '미발송' : '발송완료';
+  render();
+  try { await gasRequest('update', f); }
+  catch(e) { showStatus('저장 실패. 다시 시도하세요.', 'error'); }
+}
+
+async function deleteFirm(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  firms = firms.filter(f => f.id !== id);
+  render();
+  try { await gasRequest('delete', { id }); }
+  catch(e) { showStatus('삭제 실패.', 'error'); }
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = '업체 추가';
+  ['name','phone','building','addr','floor','room','memo'].forEach(k => document.getElementById('f-'+k).value = '');
+  document.getElementById('f-emp').value = '';
+  document.getElementById('f-type').value = '세무';
+  document.getElementById('f-sent').value = '미발송';
+  document.getElementById('modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const f = firms.find(x => x.id === id); if (!f) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = '업체 수정';
+  document.getElementById('f-name').value = f.name || '';
+  document.getElementById('f-type').value = f.type || '세무';
+  document.getElementById('f-phone').value = f.phone || '';
+  document.getElementById('f-building').value = f.building || '';
+  document.getElementById('f-addr').value = f.addr || '';
+  document.getElementById('f-floor').value = f.floor || '';
+  document.getElementById('f-room').value = f.room || '';
+  document.getElementById('f-emp').value = f.emp || '';
+  document.getElementById('f-sent').value = f.sent || '미발송';
+  document.getElementById('f-memo').value = f.memo || '';
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function saveFirm() {
+  const name = document.getElementById('f-name').value.trim();
+  const addr = document.getElementById('f-addr').value.trim();
+  if (!name) { alert('업체명을 입력하세요.'); return; }
+  if (!addr) { alert('주소를 입력하세요.'); return; }
+
+  const data = {
+    name, type: document.getElementById('f-type').value,
+    phone: document.getElementById('f-phone').value.trim(),
+    building: document.getElementById('f-building').value.trim(),
+    addr, floor: document.getElementById('f-floor').value.trim(),
+    room: document.getElementById('f-room').value.trim(),
+    emp: parseInt(document.getElementById('f-emp').value) || null,
+    sent: document.getElementById('f-sent').value,
+    memo: document.getElementById('f-memo').value.trim()
+  };
+
+  closeModal();
+  showStatus('저장 중...', 'loading');
+  document.getElementById('status-bar').style.display = 'flex';
+
+  try {
+    if (editingId) {
+      data.id = editingId;
+      Object.assign(firms.find(f => f.id === editingId), data);
+      await gasRequest('update', data);
+    } else {
+      data.id = newId();
+      firms.push(data);
+      await gasRequest('add', data);
+    }
+    showStatus('저장됐어요!', 'success');
+    render();
+  } catch(e) {
+    showStatus('저장 실패. 다시 시도하세요.', 'error');
+  }
+}
+
+// ── Mailing helpers ───────────────────────────────────────
+function toggleMailSelect(id) {
+  if (mailingSelected.has(id)) mailingSelected.delete(id);
+  else mailingSelected.add(id);
+}
+
+function selectAll() {
+  firms.filter(f => f.sent === '미발송').forEach(f => mailingSelected.add(f.id));
+  renderMailing();
+}
+
+async function markSelectedSent() {
+  if (!mailingSelected.size) { alert('업체를 선택하세요.'); return; }
+  const targets = firms.filter(f => mailingSelected.has(f.id));
+  targets.forEach(f => f.sent = '발송완료');
+  mailingSelected.clear();
+  render();
+  try {
+    await Promise.all(targets.map(f => gasRequest('update', f)));
+    showStatus(`${targets.length}개 발송완료 처리됐어요!`, 'success');
+  } catch(e) { showStatus('일부 저장 실패.', 'error'); }
+}
+
+function showExport() {
+  const pending = firms.filter(f => f.sent === '미발송');
+  if (!pending.length) { alert('미발송 업체가 없어요.'); return; }
+  const text = '업체명\t주소\t층/호\t전화번호\t유형\n' +
+    pending.map(f => `${f.name}\t${f.addr}\t${[f.floor,f.room].filter(Boolean).join(' ')}\t${f.phone||''}\t${f.type}`).join('\n');
+  document.getElementById('export-output').style.display = 'block';
+  document.getElementById('export-text').textContent = text;
+}
+
+// ── CSV export ────────────────────────────────────────────
+function exportCSV() {
+  const headers = ['ID','업체명','유형','건물명','주소','층','호수','전화번호','임직원수','발송여부','메모'];
+  const rows = firms.map(f => [f.id,f.name,f.type,f.building||'',f.addr,f.floor||'',f.room||'',f.phone||'',f.emp||'',f.sent,f.memo||'']);
+  const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = '광화문_법인_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ── Tab switch ────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['list','building','map','mailing'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === name ? '' : 'none';
+  });
+  document.getElementById('export-output').style.display = 'none';
+  if (name === 'map') { setTimeout(initMap, 100); }
+  render();
+}
+
+// ── Init ──────────────────────────────────────────────────
+const savedKey = getKakaoKey();
+if (savedKey) {
+  document.getElementById('api-banner').style.display = 'none';
+  loadKakaoSDK(savedKey);
+} else {
+  document.getElementById('kakao-key-input').value = '';
+}
+
+loadFirms();
+</script>
+</body>
+</html>
